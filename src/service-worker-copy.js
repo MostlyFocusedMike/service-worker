@@ -1,11 +1,12 @@
-let version = '5::';
+/* eslint-disable */
+const version = '5::';
 const resources = [
     // '/',
     '/styles.css',
     '/favicon.ico',
     '/thing.gif',
-    '/test'
-]
+    '/test',
+];
 self.addEventListener('install', (event) => {
     console.log('WORKER: install event in progress');
     event.waitUntil(

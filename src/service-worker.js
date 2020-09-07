@@ -1,17 +1,18 @@
-let version = '14::';
+/* eslint no-restricted-globals: ['off', 'self'] */
+const version = '14::';
 const loadWhileOffline = [
     '/',
     '/styles.css',
     '/favicon.ico',
     '/thing.gif',
-    '/test2'
+    '/test2',
 ];
 
 const cacheFirstFetch = (event) => {
     return (response) => {
         const cacheCopy = response.clone();
         caches
-            .open(version + 'pages')
+            .open(`${version}pages`)
             .then((cache) => {
                 cache.put(event.request, cacheCopy);
             })
@@ -19,8 +20,8 @@ const cacheFirstFetch = (event) => {
                 console.log('WORKER: fetch response stored in cache.', event.request.url);
             });
         return response;
-    }
-}
+    };
+};
 
 const unableToResolve = (e) => {
     console.log('WORKER: fetch request failed in both cache and network.');
@@ -29,50 +30,50 @@ const unableToResolve = (e) => {
         {
             status: 503,
             statusText: 'Shit Broke',
-            headers: new Headers({ 'Content-Type': 'text/html' })
+            headers: new Headers({ 'Content-Type': 'text/html' }),
         },
     );
-}
+};
 
 self.addEventListener('install', (event) => {
     console.log('WORKER: install event in progress');
-    const promise = caches.open(version + 'fundamentals')
+    const promise = caches.open(`${version}fundamentals`)
         .then((cache) => {
-            console.log('Adding routes to cache: ', );
-            return cache.addAll(loadWhileOffline)
+            console.log('Adding routes to cache: ');
+            return cache.addAll(loadWhileOffline);
         })
         .then(() => {
             console.log('WORKER: install completed');
-            self.skipWaiting() // https://stackoverflow.com/questions/48859119/why-my-service-worker-is-always-waiting-to-activate
-        })
+            self.skipWaiting(); // https://stackoverflow.com/questions/48859119/why-my-service-worker-is-always-waiting-to-activate
+        });
 
     event.waitUntil(promise);
 });
 
-
-self.addEventListener("fetch", (event) => {
+self.addEventListener('fetch', (event) => {
     console.log('WORKER: fetch event in progress right now.');
     if (event.request.method !== 'GET') return;
     if (!(event.request.url.indexOf('http') === 0)) return; // skip the request. if request is not made with http protocol
 
     // Cache First
     event.respondWith(
-        caches.match(event.request)
-        .then((cached) => {
-            console.log('cached: ', cached);
-            console.log('event.request fetched: ', event.request);
-            //  update Cache
-            fetch(event.request)
-                .then(cacheFirstFetch(event))
-                .catch(unableToResolve);
+        caches
+            .match(event.request)
+            .then((cached) => {
+                console.log('cached: ', cached);
+                console.log('event.request fetched: ', event.request);
+                //  update Cache
+                fetch(event.request)
+                    .then(cacheFirstFetch(event))
+                    .catch(unableToResolve);
 
-            // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
-            return cached;
-        })
+                // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
+                return cached;
+            }),
     );
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener('activate', (event) => {
     console.log('WORKER: activate event in progress.');
     // event.waitUntil(
     //   caches.keys()

@@ -1,4 +1,5 @@
 const express = require('express');
+
 const app = express();
 
 app.get('/', (req, res) => {
@@ -46,15 +47,15 @@ app.get('/styles.css', (req, res) => {
 app.get('/test3', (req, res) => {
     console.log('Hit the home rodadasdasdasute!');
     setTimeout(() => {
-        res.status(202).send({ msg: 'allll new 7'}); // json payload
-    }, 2000)
+        res.status(202).send({ msg: 'allll new 7' }); // json payload
+    }, 2000);
 });
 
 app.get('/test2', (req, res) => {
     console.log('hit test 2 no mistake');
     setTimeout(() => {
-        res.send({ msg: 'second test'}); // json payload
-    }, 2000)
+        res.send({ msg: 'second test' }); // json payload
+    }, 2000);
 });
 
 const port = 4321;
