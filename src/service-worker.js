@@ -9,16 +9,18 @@ const loadWhileOffline = [
 ];
 console.log('version: ', version);
 
-const unableToResolve = (e) => {
+const unableToResolve = (request) => (e) => {
+    console.log('e is here: ', e);
     console.log('WORKER: fetch request failed in both cache and network.');
-    return new Response(
-        '<h1>Shit Broke</h1>',
-        {
-            status: 503,
-            statusText: 'Shit Broke',
-            headers: new Headers({ 'Content-Type': 'text/html' }),
-        },
-    );
+    return caches.match(request)
+        .then((cached) => {
+            console.log('cached in error: ', cached);
+            console.log('request fetched in error: ', request);
+            //  update Cache
+
+            // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
+            return cached;
+        });
 };
 
 self.addEventListener('install', (event) => {
@@ -55,28 +57,26 @@ self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
     if (!(event.request.url.indexOf('http') === 0)) return; // skip the request. if request is not made with http protocol
 
-    const networkOnly = (request) => {
-        return fetch(request);
+    const strategy = () => {
+        if (event.request.url.endsWith('/index.js') || event.request.url.indexOf('api')) {
+            return fetch(event.request)
+                .catch(unableToResolve(event.request));
+        }
+        return caches.match(event.request)
+            .then((cached) => {
+                console.log('cached cached: ', cached);
+                console.log('event.request fetched cached: ', event.request);
+                //  update Cache
+                fetch(event.request)
+                    .then(hitAndUpdateCache(event))
+                    .catch(unableToResolve(event.request));
+
+                // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
+                return cached;
+            });
     };
 
-    const strategy = caches.match(event.request)
-        .then((cached) => {
-            console.log('cached: ', cached);
-            console.log('event.request fetched: ', event.request);
-            //  update Cache
-            fetch(event.request)
-                .then(hitAndUpdateCache(event))
-                .catch(unableToResolve);
-
-            // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
-            return cached;
-        });
-
-    if (event.request.url.endsWith('/index.js') || event.request.url.indexOf('api')) {
-        event.respondWith(networkOnly(event.request));
-    } else {
-        event.respondWith(strategy);
-    }
+    event.respondWith(strategy());
 });
 
 self.addEventListener('activate', (event) => {
