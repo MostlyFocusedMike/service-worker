@@ -1,10 +1,11 @@
 /* eslint no-restricted-globals: ['off', 'self'] */
-const version = '2::';
+const version = '5::';
 const loadWhileOffline = [
     '/',
     '/styles.css',
     '/favicon.ico',
     '/thing.gif',
+    '/index.js',
     '/test2',
 ];
 console.log('version: ', version);
@@ -16,13 +17,20 @@ const unableToResolve = (request) => (e) => {
         .then((cached) => {
             console.log('cached in error: ', cached);
             console.log('request fetched in error: ', request);
-            //  update Cache
-
-            // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
-            return cached;
+            if (cached) return cached;
+            return new Response(
+                JSON.stringify('err: broken everything ok?'),
+                {
+                    status: 403,
+                    statusText: 'Shit Broke',
+                    headers: new Headers({ 'Content-Type': 'application/json' }),
+                },
+            );
         });
 };
 
+// the install is crucial because the fetches arent intercepted yet, so you have to manually add
+// the fundamental pages in this step to load when offline
 self.addEventListener('install', (event) => {
     console.log('WORKER: install event in progress');
     const promise = caches.open(`${version}fundamentals`)
@@ -58,7 +66,7 @@ self.addEventListener('fetch', (event) => {
     if (!(event.request.url.indexOf('http') === 0)) return; // skip the request. if request is not made with http protocol
 
     const strategy = () => {
-        if (event.request.url.endsWith('/index.js') || event.request.url.indexOf('api')) {
+        if (event.request.url.indexOf('api')) {
             return fetch(event.request)
                 .catch(unableToResolve(event.request));
         }
