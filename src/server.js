@@ -44,7 +44,7 @@ app.get('/styles.css', (req, res) => {
     // res.send({ msg: 'hello world'}); // json payload
 });
 
-app.get('/test3', (req, res) => {
+app.get('/api/test3', (req, res) => {
     console.log('Hit the home rodadasdasdasute!');
     setTimeout(() => {
         res.status(202).send({ msg: 'allll new 7' }); // json payload

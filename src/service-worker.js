@@ -1,5 +1,5 @@
 /* eslint no-restricted-globals: ['off', 'self'] */
-const version = '14::';
+const version = '2::';
 const loadWhileOffline = [
     '/',
     '/styles.css',
@@ -7,21 +7,7 @@ const loadWhileOffline = [
     '/thing.gif',
     '/test2',
 ];
-
-const cacheFirstFetch = (event) => {
-    return (response) => {
-        const cacheCopy = response.clone();
-        caches
-            .open(`${version}pages`)
-            .then((cache) => {
-                cache.put(event.request, cacheCopy);
-            })
-            .then(() => {
-                console.log('WORKER: fetch response stored in cache.', event.request.url);
-            });
-        return response;
-    };
-};
+console.log('version: ', version);
 
 const unableToResolve = (e) => {
     console.log('WORKER: fetch request failed in both cache and network.');
@@ -50,27 +36,47 @@ self.addEventListener('install', (event) => {
     event.waitUntil(promise);
 });
 
+const hitAndUpdateCache = (event) => {
+    return (response) => {
+        const cacheCopy = response.clone();
+        caches
+            .open(`${version}pages`)
+            .then((cache) => {
+                cache.put(event.request, cacheCopy);
+            })
+            .then(() => {
+                console.log('WORKER: fetch response stored in cache.', event.request.url);
+            });
+    };
+};
+
 self.addEventListener('fetch', (event) => {
     console.log('WORKER: fetch event in progress right now.');
     if (event.request.method !== 'GET') return;
     if (!(event.request.url.indexOf('http') === 0)) return; // skip the request. if request is not made with http protocol
 
-    // Cache First
-    event.respondWith(
-        caches
-            .match(event.request)
-            .then((cached) => {
-                console.log('cached: ', cached);
-                console.log('event.request fetched: ', event.request);
-                //  update Cache
-                fetch(event.request)
-                    .then(cacheFirstFetch(event))
-                    .catch(unableToResolve);
+    const networkOnly = (request) => {
+        return fetch(request);
+    };
 
-                // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
-                return cached;
-            }),
-    );
+    const strategy = caches.match(event.request)
+        .then((cached) => {
+            console.log('cached: ', cached);
+            console.log('event.request fetched: ', event.request);
+            //  update Cache
+            fetch(event.request)
+                .then(hitAndUpdateCache(event))
+                .catch(unableToResolve);
+
+            // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
+            return cached;
+        });
+
+    if (event.request.url.endsWith('/index.js') || event.request.url.indexOf('api')) {
+        event.respondWith(networkOnly(event.request));
+    } else {
+        event.respondWith(strategy);
+    }
 });
 
 self.addEventListener('activate', (event) => {
