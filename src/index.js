@@ -1,9 +1,15 @@
 console.log('test 2');
 
-const button = document.getElementById('send');
-button.addEventListener('click', (e) => {
+const button1 = document.getElementById('send');
+button1.addEventListener('click', (e) => {
     console.log('new click 3');
-    fetch('http://localhost:4321/api/test3').then((r) => r.json()).then(console.log);
+    fetch('http://localhost:4321/send').then((r) => r.json()).then(console.log);
+});
+
+const button2 = document.getElementById('fail');
+button2.addEventListener('click', (e) => {
+    console.log('new click 3');
+    fetch('http://localhost:4321/api/fail').then((r) => r.json()).then(console.log);
 });
 
 const register = async () => {

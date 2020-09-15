@@ -21,7 +21,7 @@ const unableToResolve = (request) => (e) => {
             return new Response(
                 JSON.stringify('err: broken everything ok?'),
                 {
-                    status: 403,
+                    status: 502,
                     statusText: 'Shit Broke',
                     headers: new Headers({ 'Content-Type': 'application/json' }),
                 },
@@ -40,7 +40,7 @@ self.addEventListener('install', (event) => {
         })
         .then(() => {
             console.log('WORKER: install completed');
-            self.skipWaiting(); // https://stackoverflow.com/questions/48859119/why-my-service-worker-is-always-waiting-to-activate
+            // self.skipWaiting(); // https://stackoverflow.com/questions/48859119/why-my-service-worker-is-always-waiting-to-activate
         });
 
     event.waitUntil(promise);
@@ -65,26 +65,40 @@ self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
     if (!(event.request.url.indexOf('http') === 0)) return; // skip the request. if request is not made with http protocol
 
-    const strategy = () => {
-        if (event.request.url.indexOf('api')) {
-            return fetch(event.request)
-                .catch(unableToResolve(event.request));
-        }
-        return caches.match(event.request)
-            .then((cached) => {
-                console.log('cached cached: ', cached);
-                console.log('event.request fetched cached: ', event.request);
-                //  update Cache
-                fetch(event.request)
-                    .then(hitAndUpdateCache(event))
-                    .catch(unableToResolve(event.request));
+    const strategy = caches.match(event.request)
+        .then((response) => {
+            // Cache hit - return response
+            console.log('response: ', response);
+            if (response) return response;
 
-                // console.log('WORKER: fetch event', cached ? '(cached)' : '(network)', event.request.url);
-                return cached;
-            });
-    };
+            // otherwise, go fetch it and store it in the cache
+            return fetch(event.request, { credentials: 'include' })
+                .then((response2) => {
+                    // Check if we received a valid response
+                    if (!response2
+                        || response2.status === 200
+                        || response2.type !== 'basic' // if type not basic, it's third party, don't cache
+                    ) {
+                        console.log('response2: ', response2);
+                        return response2;
+                    }
 
-    event.respondWith(strategy());
+                    // IMPORTANT: Clone the response. A response is a stream
+                    // and because we want the browser to consume the response
+                    // as well as the cache consuming the response, we need
+                    // to clone it so we have two streams.
+                    const responseToCache = response2.clone();
+                    console.log('responseToCache: ', responseToCache);
+                    caches.open(`${version}fundamentals`)
+                        .then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+
+                    return response2;
+                });
+        });
+
+    event.respondWith(strategy);
 });
 
 self.addEventListener('activate', (event) => {

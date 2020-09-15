@@ -44,10 +44,17 @@ app.get('/styles.css', (req, res) => {
     // res.send({ msg: 'hello world'}); // json payload
 });
 
-app.get('/api/test3', (req, res) => {
+app.get('/send', (req, res) => {
     console.log('Hit the home rodadasdasdasute!');
     setTimeout(() => {
-        res.status(202).send({ msg: 'allll new 7' }); // json payload
+        res.send({ msg: 'send 1' }); // json payload
+    }, 2000);
+});
+
+app.get('/api/fail', (req, res) => {
+    console.log('Hit the home rodadasdasdasute!');
+    setTimeout(() => {
+        res.send({ msg: 'fail 1' }); // json payload
     }, 2000);
 });
 
